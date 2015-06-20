@@ -1,0 +1,14 @@
+{
+  "name": "node-cec",
+  "version": "0.0.1",
+  "description": "cec-client wrapper",
+  "main": "index.js",
+  "scripts": {
+  },
+  "keywords": [
+    "cec",
+    "hdmi"
+  ],
+  "author": "Patrick Wozniak <hello@patwoz.de>",
+  "license": "MIT"
+}
