@@ -19,6 +19,8 @@ class @NodeCec extends EventEmitter
     @client = spawn( @clientName, @params )
     emitLines( @client.stdout )
 
+    @client.on( 'close', @onClose )
+
     @client.stdout.on( 'line', (line) =>
 
       @emit( 'data', line )
@@ -31,6 +33,12 @@ class @NodeCec extends EventEmitter
 
     @client.kill('SIGINT')
     exec( 'killall -9 ' + @clientName )
+
+  onClose: () =>
+    @emit( 'stop', @ )
+
+  send: ( command ) ->
+    @client.stdin.write( command )
 
   processLine: ( line ) ->
 
@@ -78,7 +86,7 @@ class @NodeCec extends EventEmitter
 
     if tokens?.length > 1
       packet.opcode = tokens[1]
-      packet.args = command.substr( command.indexOf(packet.opcode + ':' ) + packet.opcode.length + 1  )
+      packet.args = command.substr( command.indexOf(packet.opcode + ':' ) + packet.opcode.length + 1  ).split( ':' )
 
 
     @emit( 'packet', packet )
