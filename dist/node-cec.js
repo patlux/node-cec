@@ -80,7 +80,6 @@
         return hex.toString(16);
       });
       command = command.join(' ');
-      console.log(command);
       return this.send('tx ' + command);
     };
 

@@ -60,7 +60,6 @@ class @NodeCec extends EventEmitter
   sendCommand: ( command... ) ->
     command = command.map( (hex) -> hex.toString(16) )
     command = command.join( ' ' )
-    console.log command
     @send( 'tx ' + command )
 
   processLine: ( line ) ->
