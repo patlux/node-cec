@@ -4,6 +4,8 @@
   "description": "cec-client wrapper",
   "main": "index.js",
   "scripts": {
+    "watch": "coffee -o dist/ -cw src/",
+    "build": "coffee -o dist/ -c src/"
   },
   "keywords": [
     "cec",

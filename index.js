@@ -1,1 +1,1 @@
-module.exports = require('./src/node-cec.coffee')
+module.exports = require('./dist/node-cec')
