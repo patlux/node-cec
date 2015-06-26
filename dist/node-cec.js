@@ -24,7 +24,19 @@
       this.processTraffic = bind(this.processTraffic, this);
       this.onClose = bind(this.onClose, this);
       this.ready = false;
-      this.defineHandlers();
+      this.stdinHandlers = [
+        {
+          contains: 'waiting for input',
+          callback: (function(_this) {
+            return function(line) {
+              return _this.emit('ready', _this);
+            };
+          })(this)
+        }, {
+          match: /^TRAFFIC:/g,
+          callback: this.processTraffic
+        }
+      ];
     }
 
     NodeCec.prototype.start = function() {
@@ -57,13 +69,24 @@
       return this.emit('stop', this);
     };
 
-    NodeCec.prototype.send = function(command) {
-      return this.client.stdin.write(command);
+    NodeCec.prototype.send = function(message) {
+      return this.client.stdin.write(message);
+    };
+
+    NodeCec.prototype.sendCommand = function() {
+      var command;
+      command = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+      command = command.map(function(hex) {
+        return hex.toString(16);
+      });
+      command = command.join(' ');
+      console.log(command);
+      return this.send('tx ' + command);
     };
 
     NodeCec.prototype.processLine = function(line) {
       var handler, i, len, matches, ref1, results;
-      ref1 = this.handlers;
+      ref1 = this.stdinHandlers;
       results = [];
       for (i = 0, len = ref1.length; i < len; i++) {
         handler = ref1[i];
@@ -96,9 +119,7 @@
     NodeCec.prototype.processTraffic = function(traffic) {
       var command, packet, tokens;
       packet = {};
-      packet.line = traffic;
       command = traffic.substr(traffic.indexOf(']\t') + 2);
-      packet["in"] = command.indexOf('>>') === 0;
       command = command.substr(command.indexOf(' ') + 1);
       tokens = command.split(':');
       if (tokens != null) {
@@ -118,87 +139,56 @@
     };
 
     NodeCec.prototype.processPacket = function(packet) {
-      var address, arg_address, args_vendorId, from, key, list_status, opcode, opcodes, osdname, packetVendorName, ref1, ref2, results, status, to, type, types, vendorId, vendorName;
+      var from, key, opcode, opcodes, osdname, ref1, source, to;
       if (!(((ref1 = packet.tokens) != null ? ref1.length : void 0) > 1)) {
         this.emit('POLLING', packet);
         return;
       }
-      this.emit('packet', packet);
       switch (packet.opcode) {
-        case CEC.Opcode.REPORT_POWER_STATUS:
-          list_status = ['ON', 'OFF', 'Standby to ON', 'ON to Standby'];
-          status = list_status[packet.args[0]];
-          return this.emit('REPORT_POWER_STATUS', packet, status);
         case CEC.Opcode.SET_OSD_NAME:
-          osdname = String.fromCharCode.apply(null, packet.args);
-          return this.emit('SET_OSD_NAME', packet, osdname);
-        case CEC.Opcode.ROUTING_CHANGE:
-          from = packet.args.slice(0, 2).map(function(hex) {
-            return hex.toString(16);
-          });
-          to = packet.args.slice(2, 4).map(function(hex) {
-            return hex.toString(16);
-          });
-          return this.emit('ROUTING_CHANGE', packet, from, to);
-        case CEC.Opcode.ACTIVE_SOURCE:
-          return this.emit('ACTIVE_SOURCE', packet, packet.args.join(''));
-        case CEC.Opcode.DEVICE_VENDOR_ID:
-          args_vendorId = packet.args[0] + packet.args[1] + packet.args[2];
-          packetVendorName = '';
-          ref2 = CEC.VendorId;
-          for (vendorName in ref2) {
-            vendorId = ref2[vendorName];
-            if (vendorId === args_vendorId) {
-              packetVendorName = vendorName;
-            }
+          if (!(packet.args.length >= 1)) {
+            break;
           }
-          return this.emit('DEVICE_VENDOR_ID', packet, packetVendorName, args_vendorId);
+          osdname = String.fromCharCode.apply(null, packet.args);
+          this.emit('SET_OSD_NAME', packet, osdname);
+          return true;
+        case CEC.Opcode.ROUTING_CHANGE:
+          if (!(packet.args.length >= 4)) {
+            break;
+          }
+          from = packet.args[0] << 8 | packet.args[1];
+          to = packet.args[2] << 8 | packet.args[3];
+          this.emit('ROUTING_CHANGE', packet, from, to);
+          return true;
+        case CEC.Opcode.ACTIVE_SOURCE:
+          if (!(packet.args.length >= 2)) {
+            break;
+          }
+          source = packet.args[0] << 8 | packet.args[1];
+          this.emit('ACTIVE_SOURCE', packet, source);
+          return true;
         case CEC.Opcode.REPORT_PHYSICAL_ADDRESS:
-          arg_address = packet.args[0] + packet.args[1];
-          address = arg_address;
-          types = ['TV', 'Recording Device', 'Reserved', 'Tuner', 'Playback Device', 'Audio System'];
-          type = types[packet.args[2]];
-          return this.emit('REPORT_PHYSICAL_ADDRESS', packet, address, type);
+          if (!(packet.args.length >= 2)) {
+            break;
+          }
+          source = packet.args[0] << 8 | packet.args[1];
+          this.emit('REPORT_PHYSICAL_ADDRESS', packet, source, packet.args[2]);
+          return true;
         default:
           opcodes = CEC.Opcode;
-          results = [];
           for (key in opcodes) {
             opcode = opcodes[key];
-            if (opcode === packet.opcode) {
-              if ((key != null ? key.length : void 0) > 0) {
-                results.push(this.emit(key, packet));
-              } else {
-                results.push(void 0);
-              }
+            if (!(opcode === packet.opcode)) {
+              continue;
             }
+            if ((key != null ? key.length : void 0) > 0) {
+              this.emit.apply(this, [key, packet].concat(slice.call(packet.args)));
+            }
+            return true;
           }
-          return results;
       }
-    };
-
-    NodeCec.toAddressStr = function(address) {};
-
-    NodeCec.prototype.defineHandlers = function() {
-      return this.handlers = [
-        {
-          contains: 'waiting for input',
-          callback: (function(_this) {
-            return function(line) {
-              return _this.emit('ready', _this);
-            };
-          })(this)
-        }, {
-          match: /^TRAFFIC:/g,
-          callback: this.processTraffic
-        }, {
-          match: /key pressed: (.+)\s\(/,
-          callback: (function(_this) {
-            return function(line) {
-              return _this.emit('debug', line);
-            };
-          })(this)
-        }
-      ];
+      this.emit('packet', packet);
+      return false;
     };
 
     return NodeCec;

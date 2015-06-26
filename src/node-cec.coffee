@@ -1,7 +1,7 @@
 {spawn,exec}   = require 'child_process'
 {EventEmitter} = require 'events'
 emitLines      = require './lib/emitLines'
-@CEC      = require './lib/cectypes'
+@CEC           = require './lib/cectypes'
 
 CEC = @CEC
 
@@ -13,8 +13,19 @@ class @NodeCec extends EventEmitter
 
   constructor: ( @cecName=null ) ->
     @ready = false
+    @stdinHandlers = [
 
-    @defineHandlers()
+      {
+        contains: 'waiting for input'
+        callback: ( line ) => @emit( 'ready', @ )
+      }
+
+      {
+        match: /^TRAFFIC:/g
+        callback: @processTraffic
+      }
+
+    ]
 
   start: ( @clientName = 'cec-client', @params... ) ->
 
@@ -43,12 +54,18 @@ class @NodeCec extends EventEmitter
   onClose: () =>
     @emit( 'stop', @ )
 
-  send: ( command ) ->
-    @client.stdin.write( command )
+  send: ( message ) ->
+    @client.stdin.write( message )
+
+  sendCommand: ( command... ) ->
+    command = command.map( (hex) -> hex.toString(16) )
+    command = command.join( ' ' )
+    console.log command
+    @send( 'tx ' + command )
 
   processLine: ( line ) ->
 
-    for handler in @handlers
+    for handler in @stdinHandlers
 
       if handler.contains?
         if line.indexOf( handler.contains ) >= 0
@@ -74,13 +91,9 @@ class @NodeCec extends EventEmitter
   processTraffic: ( traffic ) =>
     packet = {}
 
-    packet.line = traffic
+    command = traffic.substr( traffic.indexOf(']\t') + 2 ) # "<< 0f:..:.."
+    command = command.substr( command.indexOf( ' ' ) + 1 ) # "0f:..:.."
 
-    command = traffic.substr( traffic.indexOf(']\t') + 2 ) # << 0f:..:..
-
-    packet.in = command.indexOf('>>') == 0
-
-    command = command.substr( command.indexOf( ' ' ) + 1 ) # 0f:..:..
     tokens = command.split(':') # 0f .. ..
 
     if tokens?
@@ -100,93 +113,62 @@ class @NodeCec extends EventEmitter
 
   processPacket: ( packet ) ->
 
+    # no opcode?
     unless packet.tokens?.length > 1
       @emit( 'POLLING', packet )
       return
 
-    @emit( 'packet', packet )
-
     switch packet.opcode
-
-      when CEC.Opcode.REPORT_POWER_STATUS
-        list_status = [ 'ON', 'OFF', 'Standby to ON', 'ON to Standby' ]
-        status = list_status[ packet.args[0] ]
-        @emit( 'REPORT_POWER_STATUS', packet, status )
 
       # -------------------------------------------------------------------------- #
       #    #OSD
 
       when CEC.Opcode.SET_OSD_NAME
+        break unless packet.args.length >= 1
         osdname = String.fromCharCode.apply( null, packet.args )
         @emit( 'SET_OSD_NAME', packet, osdname )
+        return true
+
+
 
       # -------------------------------------------------------------------------- #
-      #    #SOURCE
+      #    #SOURCE / ADDRESS
 
-      when CEC.Opcode.ROUTING_CHANGE
-        from = packet.args[0..1].map (hex) -> hex.toString(16)
-        to = packet.args[2..3].map (hex) -> hex.toString(16)
+      when CEC.Opcode.ROUTING_CHANGE # SOURCE CHANGED
+        break unless packet.args.length >= 4
+        from = packet.args[0] << 8 | packet.args[1]
+        to   = packet.args[2] << 8 | packet.args[3]
         @emit( 'ROUTING_CHANGE', packet, from, to )
+        return true
 
       when CEC.Opcode.ACTIVE_SOURCE
-        @emit( 'ACTIVE_SOURCE', packet, packet.args.join('') )
+        break unless packet.args.length >= 2
+        source   = packet.args[0] << 8 | packet.args[1]
+        @emit( 'ACTIVE_SOURCE', packet, source )
+        return true
 
-      # -------------------------------------------------------------------------- #
-      #    #VENDOR
-
-      when CEC.Opcode.DEVICE_VENDOR_ID
-        args_vendorId = packet.args[0] + packet.args[1] + packet.args[2]
-        packetVendorName = ''
-
-        for vendorName, vendorId of CEC.VendorId when vendorId == args_vendorId
-          packetVendorName = vendorName
-
-        @emit( 'DEVICE_VENDOR_ID', packet, packetVendorName, args_vendorId )
+      when CEC.Opcode.REPORT_PHYSICAL_ADDRESS
+        break unless packet.args.length >= 2
+        source = packet.args[0] << 8 | packet.args[1]
+        @emit( 'REPORT_PHYSICAL_ADDRESS', packet, source, packet.args[2] )
+        return true
 
 
 
       # -------------------------------------------------------------------------- #
       #    #OTHER
 
-      when CEC.Opcode.REPORT_PHYSICAL_ADDRESS
-        arg_address = packet.args[0] + packet.args[1]
-        address = arg_address
-        types = [ 'TV', 'Recording Device', 'Reserved', 'Tuner', 'Playback Device', 'Audio System' ]
-        type = types[ packet.args[2] ]
-        @emit( 'REPORT_PHYSICAL_ADDRESS', packet, address, type )
-
       else
 
         opcodes = CEC.Opcode
         for key, opcode of opcodes when opcode == packet.opcode
-          @emit( key, packet ) if key?.length > 0
+          @emit( key, packet, packet.args... ) if key?.length > 0
+          return true
 
 
 
-  @toAddressStr: ( address ) ->
+    # emit unhandled packet
+    @emit( 'packet', packet )
 
-
-  # -------------------------------------------------------------------------- #
-  #    #HANDLERS
-  # -------------------------------------------------------------------------- #
-
-  defineHandlers: () ->
-
-    @handlers = [
-
-      {
-        contains: 'waiting for input'
-        callback: ( line ) => @emit( 'ready', @ )
-      }
-
-      {
-        match: /^TRAFFIC:/g
-        callback: @processTraffic
-      }
-
-      {
-        match: /key pressed: (.+)\s\(/
-        callback: ( line ) => @emit( 'debug', line )
-      }
-
-    ]
+    # not handled
+    return false
