@@ -4,13 +4,17 @@
   "description": "cec-client wrapper",
   "main": "index.js",
   "scripts": {
-    "watch": "coffee -o dist/ -cw src/",
-    "build": "coffee -o dist/ -c src/"
+    "build": "coffee -o lib/ -c src/",
+    "watch": "coffee -o lib/ -cw src/",
+    "prepublish": "npm run build"
   },
   "keywords": [
     "cec",
     "hdmi"
   ],
   "author": "Patrick Wozniak <hello@patwoz.de>",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "coffee-script": "^1.9.3"
+  }
 }

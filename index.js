@@ -1,1 +1,1 @@
-module.exports = require('./dist/node-cec')
+module.exports = require( './dist/node-cec' )
