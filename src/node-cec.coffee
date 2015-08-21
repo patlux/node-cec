@@ -59,10 +59,11 @@ class @NodeCec extends EventEmitter
 
   sendCommand: ( command... ) ->
     command = command.map( (hex) -> hex.toString(16) )
-    command = command.join( ' ' )
+    command = command.join( ':' )
     @send( 'tx ' + command )
 
   processLine: ( line ) ->
+    @emit( 'line', line )
 
     for handler in @stdinHandlers
 
@@ -105,7 +106,6 @@ class @NodeCec extends EventEmitter
     if tokens?.length > 1
       packet.opcode = parseInt( tokens[1], 16 )
       packet.args = tokens[2..tokens.length].map( (hexString) -> parseInt( hexString, 16 ) )
-
 
     @processPacket( packet )
 
