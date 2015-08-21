@@ -1,13 +1,14 @@
 {spawn,exec}   = require 'child_process'
 {EventEmitter} = require 'events'
-emitLines      = require './lib/emitLines'
-@CEC           = require './lib/cectypes'
-
-CEC = @CEC
 
 # -------------------------------------------------------------------------- #
 #    #NodeCEC
 # -------------------------------------------------------------------------- #
+
+emitLines      = require './lib/emitLines'
+@CEC           = require './lib/cectypes'
+
+CEC = @CEC
 
 class @NodeCec extends EventEmitter
 
