@@ -2,19 +2,19 @@
   "name": "node-cec",
   "version": "0.0.1",
   "description": "cec-client wrapper",
+  "author": "Patrick Wozniak <hello@patwoz.de>",
   "main": "index.js",
+  "keywords": [
+    "cec",
+    "hdmi"
+  ],
   "scripts": {
     "build": "coffee -o lib/ -c src/",
     "watch": "coffee -o lib/ -cw src/",
     "prepublish": "npm run build"
   },
-  "keywords": [
-    "cec",
-    "hdmi"
-  ],
-  "author": "Patrick Wozniak <hello@patwoz.de>",
-  "license": "MIT",
   "devDependencies": {
     "coffee-script": "^1.9.3"
-  }
+  },
+  "license": "MIT"
 }
