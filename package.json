@@ -16,5 +16,9 @@
   "devDependencies": {
     "coffee-script": "^1.9.3"
   },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/patlux/node-cec.git"
+  },
   "license": "MIT"
 }
