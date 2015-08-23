@@ -1,6 +1,6 @@
 {
   "name": "node-cec",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "cec-client wrapper",
   "author": "Patrick Wozniak <hello@patwoz.de>",
   "main": "index.js",
