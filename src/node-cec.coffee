@@ -1,4 +1,4 @@
-{ spawn, exec }   = require( 'child_process' )
+{ spawn }   = require( 'child_process' )
 { EventEmitter }  = require( 'events' )
 
 # ---------------------------------------------------------------------------- #
@@ -48,9 +48,7 @@ class @NodeCec extends EventEmitter
 
   stop: () ->
     @emit( 'stop', @ )
-
     @client.kill('SIGINT')
-    exec( 'killall -9 ' + @clientName )
 
   onClose: () =>
     @emit( 'stop', @ )
