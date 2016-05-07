@@ -1,12 +1,12 @@
-{spawn,exec}   = require 'child_process'
-{EventEmitter} = require 'events'
+{ spawn, exec }   = require( 'child_process' )
+{ EventEmitter }  = require( 'events' )
 
-# -------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
 #    #NodeCEC
-# -------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
 
-emitLines      = require './lib/emitLines'
-@CEC           = require './lib/cectypes'
+emitLines      = require( './lib/emitLines' )
+@CEC           = require( './lib/cectypes' )
 
 CEC = @CEC
 
@@ -106,7 +106,9 @@ class @NodeCec extends EventEmitter
 
     if tokens?.length > 1
       packet.opcode = parseInt( tokens[1], 16 )
-      packet.args = tokens[2..tokens.length].map( (hexString) -> parseInt( hexString, 16 ) )
+      packet.args = tokens[2..tokens.length].map( (hexString) ->
+        parseInt( hexString, 16 )
+      )
 
     @processPacket( packet )
 
@@ -120,7 +122,7 @@ class @NodeCec extends EventEmitter
 
     switch packet.opcode
 
-      # -------------------------------------------------------------------------- #
+      # ---------------------------------------------------------------------- #
       #    #OSD
 
       when CEC.Opcode.SET_OSD_NAME
@@ -131,7 +133,7 @@ class @NodeCec extends EventEmitter
 
 
 
-      # -------------------------------------------------------------------------- #
+      # ---------------------------------------------------------------------- #
       #    #SOURCE / ADDRESS
 
       when CEC.Opcode.ROUTING_CHANGE # SOURCE CHANGED
@@ -155,7 +157,7 @@ class @NodeCec extends EventEmitter
 
 
 
-      # -------------------------------------------------------------------------- #
+      # ---------------------------------------------------------------------- #
       #    #OTHER
 
       else
