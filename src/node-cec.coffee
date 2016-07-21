@@ -54,7 +54,7 @@ class @NodeCec extends EventEmitter
     @emit( 'stop', @ )
 
   send: ( message ) ->
-    @client.stdin.write( message )
+    @client.stdin.write( message + '\n' )
 
   sendCommand: ( command... ) ->
     command = command.map( (hex) -> hex.toString(16) )
